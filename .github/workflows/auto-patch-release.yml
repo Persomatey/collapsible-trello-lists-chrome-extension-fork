@@ -1,0 +1,75 @@
+name: Auto Patch Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      zip_name:
+        description: "Name of the ZIP file (without .zip extension)"
+        required: false
+        default: "CollapsibleTrelloLists"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Get highest semver tag
+        id: get_tag
+        run: |
+          all_tags=$(git tag -l "v*")
+          if [ -z "$all_tags" ]; then
+            last_tag="v0.0.0"
+          else
+            last_tag=$(printf "%s\n" $all_tags | sort -t. -k1,1V -k2,2V -k3,3V | tail -n 1)
+          fi
+          echo "last_tag=$last_tag" >> $GITHUB_OUTPUT
+
+      - name: Calculate next PATCH version
+        id: bump
+        run: |
+          last="${{ steps.get_tag.outputs.last_tag }}"
+          version=${last#v}
+          IFS='.' read -r major minor patch <<< "$version"
+          patch=$((patch + 1))
+          new_tag="v$major.$minor.$patch"
+          echo "new_tag=$new_tag" >> $GITHUB_OUTPUT
+
+      - name: Create new tag and push it
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git tag ${{ steps.bump.outputs.new_tag }}
+          git push origin ${{ steps.bump.outputs.new_tag }}
+
+      - name: Build ZIP name
+        id: zipname
+        run: |
+          base="${{ github.event.inputs.zip_name }}"
+          tag="${{ steps.bump.outputs.new_tag }}"
+          if [ -z "$base" ]; then
+            base="source"
+          fi
+          zipname="${base}.zip"
+          echo "zipname=$zipname" >> $GITHUB_OUTPUT
+
+      - name: Create ZIP excluding .github
+        run: |
+          zip -r "${{ steps.zipname.outputs.zipname }}" . -x ".github/*" ".git/*"
+
+      - name: Create Release and upload asset
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ steps.bump.outputs.new_tag }}
+          name: Release ${{ steps.bump.outputs.new_tag }}
+          artifacts: ${{ steps.zipname.outputs.zipname }}
+          allowUpdates: true
+          draft: false
+          prerelease: false
