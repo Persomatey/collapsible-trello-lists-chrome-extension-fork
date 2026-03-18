@@ -5,17 +5,14 @@ on:
     branches:
       - main
   workflow_dispatch:
-    inputs:
-      zip_name:
-        description: "Name of the ZIP file (without .zip extension)"
-        required: false
-        default: "better-collapsible-trello-lists-chrome-extension"
 
 jobs:
   release:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    env:
+      DEFAULT_ZIP_NAME: "better-collapsible-trello-lists-chrome-extension"
 
     steps:
       - name: Checkout repository
@@ -102,12 +99,7 @@ jobs:
       - name: Build ZIP name
         id: zipname
         run: |
-          base="${{ github.event.inputs.zip_name }}"
-          tag="${{ steps.bump.outputs.new_tag }}"
-          if [ -z "$base" ]; then
-            base="${ zip_name.default }"
-          fi
-          zipname="${base}-${{ steps.bump.outputs.new_tag }}.zip"
+          zipname="${DEFAULT_ZIP_NAME}-${{ steps.bump.outputs.new_tag }}.zip"
           echo "zipname=$zipname" >> $GITHUB_OUTPUT
 
       - name: Create ZIP excluding .github
