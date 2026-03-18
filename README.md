@@ -4,7 +4,7 @@ This is an improvement of the original [Collapsible Trello Lists](https://chrome
 ## Features 
 - Adds a button above each Trello list that allows you to collapse the column
 	- This is the original functionality
-- Displays teh count of cards currently in the collapsed list
+- Displays the count of cards currently in the collapsed list
 
 ## Installation 
 1. Download the latest release
