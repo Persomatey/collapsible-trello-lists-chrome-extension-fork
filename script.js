@@ -1,53 +1,53 @@
-if (!document.querySelector(".collapse-toggle")) {
-  var boardid = window.location.href.substring(
-    window.location.href.indexOf("/b/") + 3,
-    window.location.href.indexOf("/b/") + 11
-  );
+document.querySelectorAll(".collapse-toggle").forEach(el => el.remove());
 
-  document.querySelectorAll("h2[data-testid='list-name']").forEach(e => {
-    var columnName = encodeURI(e.textContent);
+var boardid = window.location.href.substring(
+  window.location.href.indexOf("/b/") + 3,
+  window.location.href.indexOf("/b/") + 11
+);
 
-    // ✨ Count cards in this list
-    var cardCount = e.closest("[data-testid='list']")
-      .querySelectorAll("[data-testid='trello-card']").length;
+document.querySelectorAll("h2[data-testid='list-name']").forEach(e => {
+  var columnName = encodeURI(e.textContent);
 
-    chrome.storage.local.get(boardid + ":" + columnName, isClosed => {
-      if (isClosed[boardid + ":" + columnName]) {
-        e.parentNode.parentNode.parentNode.classList.add("-closed");
-        e.parentNode.parentNode.parentNode.classList.add("-cl");
-      }
+  // ✨ Count cards in this list
+  var cardCount = e.closest("[data-testid='list']")
+    .querySelectorAll("[data-testid='trello-card']").length;
 
-      var toggle = document.createElement("div");
-      toggle.className = "collapse-toggle";
+  chrome.storage.local.get(boardid + ":" + columnName, isClosed => {
+    if (isClosed[boardid + ":" + columnName]) {
+      e.parentNode.parentNode.parentNode.classList.add("-closed");
+      e.parentNode.parentNode.parentNode.classList.add("-cl");
+    }
 
-      // ✨ Set card count as a data attribute for CSS to pick up
-      toggle.dataset.count = cardCount;
+    var toggle = document.createElement("div");
+    toggle.className = "collapse-toggle";
 
-      toggle.addEventListener("click", evt => {
-        var thisColumn = encodeURI(evt.target.nextSibling.textContent);
+    // ✨ Set card count as a data attribute for CSS to pick up
+    toggle.dataset.count = cardCount;
 
-        // ✨ Refresh card count on toggle (list may have changed)
-        var freshCount = evt.target.closest("[data-testid='list']")
-          .querySelectorAll("[data-testid='trello-card']").length;
-        evt.target.dataset.count = freshCount;
+    toggle.addEventListener("click", evt => {
+      var thisColumn = encodeURI(evt.target.nextSibling.textContent);
 
-        chrome.storage.local.set(
-          {
-            [boardid + ":" + thisColumn]: isClosed[boardid + ":" + columnName]
-              ? null
-              : true
-          },
-          res => {
-            evt.target.parentNode.parentNode.parentNode.classList.toggle("-closed");
-            evt.target.parentNode.parentNode.parentNode.classList.toggle("-cl");
-          }
-        );
-      });
+      // ✨ Refresh card count on toggle (list may have changed)
+      var freshCount = evt.target.closest("[data-testid='list']")
+        .querySelectorAll("[data-testid='trello-card']").length;
+      evt.target.dataset.count = freshCount;
 
-      e.parentNode.insertBefore(toggle, e);
+      chrome.storage.local.set(
+        {
+          [boardid + ":" + thisColumn]: isClosed[boardid + ":" + columnName]
+            ? null
+            : true
+        },
+        res => {
+          evt.target.parentNode.parentNode.parentNode.classList.toggle("-closed");
+          evt.target.parentNode.parentNode.parentNode.classList.toggle("-cl");
+        }
+      );
     });
-  });
 
+    e.parentNode.insertBefore(toggle, e);
+  });
+  
   var isClosed, openList;
   document.querySelectorAll("div[data-testid='list']").forEach(lc => {
     lc.addEventListener("dragenter", lce => {
