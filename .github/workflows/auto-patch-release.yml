@@ -66,6 +66,39 @@ jobs:
           git tag ${{ steps.bump.outputs.new_tag }}
           git push origin ${{ steps.bump.outputs.new_tag }}
 
+      - name: Build release notes
+        id: release_notes
+        run: |
+          # For a push event, github.event.before is the SHA before the push.
+          # For workflow_dispatch, fall back to the previous tag as the base.
+          if [ "${{ github.event_name }}" = "push" ]; then
+            base_sha="${{ github.event.before }}"
+          else
+            base_sha="${{ steps.get_tag.outputs.last_tag }}"
+          fi
+
+          notes=""
+          # Iterate over each commit SHA in the range (oldest to newest)
+          while IFS= read -r sha; do
+            subject=$(git log -1 --format="%s" "$sha")
+            body=$(git log -1 --format="%b" "$sha")
+            short=$(git rev-parse --short "$sha")
+
+            notes="${notes}### \`${short}\` ${subject}"$'\n'
+            if [ -n "$body" ]; then
+              notes="${notes}${body}"$'\n'
+            fi
+            notes="${notes}"$'\n'
+          done < <(git log --reverse --format="%H" "${base_sha}..HEAD")
+
+          if [ -z "$notes" ]; then
+            notes="No commit information available."
+          fi
+
+          # Write to a file to safely pass multiline content
+          echo "$notes" > release_notes.md
+          echo "notes_file=release_notes.md" >> $GITHUB_OUTPUT
+
       - name: Build ZIP name
         id: zipname
         run: |
@@ -86,6 +119,7 @@ jobs:
         with:
           tag: ${{ steps.bump.outputs.new_tag }}
           name: Release ${{ steps.bump.outputs.new_tag }}
+          bodyFile: ${{ steps.release_notes.outputs.notes_file }}
           artifacts: ${{ steps.zipname.outputs.zipname }}
           allowUpdates: true
           draft: false
