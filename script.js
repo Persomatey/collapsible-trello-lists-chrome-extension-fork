@@ -83,4 +83,4 @@ document.querySelectorAll("h2[data-testid='list-name']").forEach(e =>
       });
     });
   });
-}
+});
